@@ -31,7 +31,7 @@ moviedata['budget'] = pd.to_numeric(moviedata['budget'], errors='coerce')
 #moviedata['budget'] = moviedata['budget'].replace(0, np.nan)
 #moviedata['revenue'] = moviedata['revenue'].replace(0, np.nan)
 moviedata ['profit'] = moviedata['revenue'] - moviedata['budget']
-#moviedata ['profit'] 
+#moviedata ['profit']
 
 moviedata.loc[2222,'genres'] = moviedata.loc[2222]['genres'].replace(" GATORADE","]")
 
@@ -88,12 +88,12 @@ for index, row in pc_dat_final.iterrows():
 #NO Keys generated but model would
 
 PRODUCTION_COMP_FACT = pysqldf("""SELECT production_companies
-                               ,orig_genre_name 
+                               ,orig_genre_name
                                ,sum(budget) as budget
                                ,sum(revenue) as revenue
                                ,sum(profit) as profit
                                ,sum(popularity) as popularity
-                               ,release_year 
+                               ,release_year
                                ,count(distinct id) as movie_count
                                FROM pc_dat group by release_year,production_companies,orig_genre_name ;""")
 
@@ -105,22 +105,24 @@ GENRES_FACT = pysqldf("""SELECT production_company_derived as production_company
                           ,budget
                           ,revenue
                           ,profit
-                          ,popularity 
+                          ,popularity
                           ,count(distinct id) as movie_count
                           FROM genre_dat_final;""")
 
-GENRE_DIM =  pysqldf("""SELECT 
+GENRE_DIM =  pysqldf("""SELECT
                           keygen_seq()
-                          ,genres_derived as genre_name 
+                          ,genres_derived as genre_name
+                          ,orig_genre_name as orig_genre_name
                           FROM gen_final_dat
                           UNION ALL
-                          SELECT 
+                          SELECT
                           keygen_seq()
                           ,orig_genre as genre_name
+                          ,null as orig_genre_name
                           FROM genre_dat_final
                           """)
 
-PRODUCTION_COMP_DIM =  pysqldf("""SELECT 
+PRODUCTION_COMP_DIM =  pysqldf("""SELECT
                           keygen_seq()
                           ,production_company_derived as production_company
                           FROM pc_final_dat
@@ -140,7 +142,7 @@ sql ="""select release_year
     ,sum(budget) as budget
     ,sum(revenue) as revenue,
     sum(profit) as profit
-    from PRODUCTION_COMPANY_FACT where [PARM=release year] 
+    from PRODUCTION_COMPANY_FACT where [PARM=release year]
     group by release_year,production_company"""
 
 
@@ -148,9 +150,9 @@ sql ="""select release_year
 sql = """
 select release_year
     ,production_company
-    ,count( distinct gf.genre)
-    from PRODUCTION_COMPANY_FACT join GENRE_FACT on
-    pcf.orig_genre_name = gf.orig_genre_name where [PARM=release year] 
+    ,count( distinct gd.genre_name) # should be key
+    from PRODUCTION_COMPANY_FACT join GENRE_DIM on
+    pcf.orig_genre_name = gd.orig_genre_name where [PARM=release year]
     group by release_year,production_company,genre
 ;"""
 
@@ -162,7 +164,7 @@ select release_year
     ,sum(movie_count) movie_num
     ,sum(popularity) popular_num
     ,max(popularity/movie_num) average_popularity //could be inline view and outer select depending on system
-    from PRODUCTION_COMPANY_FACT where [PARM=release year] 
+    from PRODUCTION_COMPANY_FACT where [PARM=release year]
     group by release_year,production_company
 ;"""
 
@@ -180,12 +182,12 @@ select release_year
 
 sql ="""
 
-select * from ( 
+select * from (
     select
     release_year
     ,genre
     , rank(sum(popularity) over release_year) popular_rank
-    from GENRE_FACT where [PARM=release year] 
+    from GENRE_FACT where [PARM=release year]
     group by release_year,genre) inner
     where popular_rank <= [PARM]"""
     
@@ -199,6 +201,6 @@ sql ="""select release_year
     ,sum(budget) as budget
     ,sum(revenue) as revenue,
     sum(profit) as profit
-    from GENRE_FACT where [PARM=release year] 
+    from GENRE_FACT where [PARM=release year]
     group by release_year,genre"""
 
